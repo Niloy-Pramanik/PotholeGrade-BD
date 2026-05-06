@@ -1,0 +1,15 @@
+data/
+runs/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.env
+.DS_Store
+*.egg-info/
+dist/
+build/
+.vscode/
+.idea/
+*.mp4
+.pytest_cache/
