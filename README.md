@@ -281,6 +281,153 @@ Output Video + Metrics
 
 ---
 
+## 🔄 Complete 4-Stage Inference Pipeline
+
+The inference pipeline consists of **4 sequential stages** that transform a raw road image into a prioritized pothole repair recommendation:
+
+```
+Stage 1: Pothole Segmentation
+         ↓
+Stage 2: DIP-Based Depth Estimation
+         ↓
+Stage 3: Volumetric Repair Calculation
+         ↓
+Stage 4: Repair Priority Scoring
+```
+
+### **Stage 1: YOLOv8-Seg Segmentation** 🎯
+
+**Purpose:** Detect and extract pothole boundaries from the road image
+
+| Component | Details |
+|-----------|---------|
+| **Input** | Road frame / smartphone dashcam image (H × W × 3) |
+| **Process** | YOLOv8-Seg inference → Extract polygon coordinates |
+| **Mathematical Output** | Polygon vertices + class label (Dry_Pothole / Wet_Pothole) |
+| **Output** | Binary mask isolating pothole region |
+| **Code** | `src/05_inference_main.py` (YOLO inference) |
+
+```python
+# Example
+results = model(frame)  # YOLO inference
+polygon = results[0].masks.xy[0]  # Polygon coordinates
+class_name = results[0].names[int(class_id)]  # Pothole class
+```
+
+---
+
+### **Stage 2: OpenCV Depth Estimation** 📐
+
+**Purpose:** Estimate physical depth from shadow gradients (NO neural networks)
+
+| Component | Details |
+|-----------|---------|
+| **Input** | Original image + polygon coordinates |
+| **Process** | 1. Mask creation (cv2.fillPoly) 2. Grayscale conversion 3. Sobel gradient analysis |
+| **Mathematical Formula** | $Depth_{cm} = \alpha \times \sigma(\nabla I)$ where $\alpha = 0.15$ (calibration) |
+| **Key Insight** | Shadow gradients inside pothole correlate with depth |
+| **Output** | Estimated physical depth in centimeters |
+| **Code** | `src/03_dip_engine.py` (_calculate_shadow_gradient method) |
+
+```python
+# Mathematical breakdown
+sobel_x = cv2.Sobel(gray_image, cv2.CV_64F, 1, 0, ksize=3)
+sobel_y = cv2.Sobel(gray_image, cv2.CV_64F, 0, 1, ksize=3)
+gradient_magnitude = np.sqrt(sobel_x**2 + sobel_y**2)
+gradient_std = np.std(gradient_magnitude[mask > 0])
+depth_cm = gradient_std * CALIBRATION_CONSTANT  # 0.15
+```
+
+---
+
+### **Stage 3: Repair Volume Calculation** 📦
+
+**Purpose:** Calculate asphalt material needed for repair (in kilograms)
+
+| Component | Details |
+|-----------|---------|
+| **Input** | Pothole area (pixels) + estimated depth (cm) |
+| **Process** | 1. Contour area estimation 2. Pixel-to-physical unit conversion 3. Density-based material calculation |
+| **Mathematical Formula** | $Volume_{kg} = Area_{cm^2} \times Depth_{cm} \times \rho_{asphalt}$ |
+| **Constants** | Pixel scale: 1 px² = 0.5 cm² | Asphalt density: 2.4 g/cm³ |
+| **Output** | Estimated asphalt repair material in kilograms |
+| **Code** | `src/03_dip_engine.py` (calculate_metrics method) |
+
+```python
+# Mathematical breakdown
+area_pixels = cv2.contourArea(polygon_coords)
+area_cm2 = area_pixels * PIXEL_TO_CM2  # 0.5
+volume_cm3 = area_cm2 * depth_cm
+volume_g = volume_cm3 * ASPHALT_DENSITY  # 2.4 g/cm³
+volume_kg = volume_g / 1000.0  # Convert to kg
+```
+
+---
+
+### **Stage 4: Repair Priority Scoring** 🎯
+
+**Purpose:** Assign urgency score (RPS: 1-5) for maintenance scheduling
+
+| Component | Details |
+|-----------|---------|
+| **Input** | Volume (kg) + pothole class (Wet/Dry) |
+| **Process** | Priority rule evaluation based on damage severity |
+| **Decision Logic** | RPS 5 if Wet else if Vol > 20kg → RPS 4 else if Vol > 5kg → RPS 3 else RPS 1 |
+| **Output** | Repair Priority Score (1 = monitor, 5 = critical) |
+| **Code** | `src/04_rps_logic.py` (calculate_rps function) |
+
+```python
+# Decision tree
+def calculate_rps(volume_kg: float, pothole_class: str) -> int:
+    if pothole_class.upper() == "WET_POTHOLE":
+        return 5  # Critical - hidden depth danger
+    elif volume_kg > 20.0:
+        return 4  # Major damage
+    elif volume_kg > 5.0:
+        return 3  # Standard repair
+    else:
+        return 1  # Monitor
+```
+
+---
+
+### **RPS Scoring Table** 📊
+
+| RPS | Priority | Condition | Color | Action |
+|-----|----------|-----------|-------|--------|
+| **5** | 🔴 CRITICAL | Wet pothole (any volume) | Red | **Urgent repair** - Hidden danger |
+| **4** | 🟠 HIGH | Dry pothole, Vol > 20 kg | Red | **Immediate repair** - Major damage |
+| **3** | 🟡 MEDIUM | Dry pothole, 5-20 kg | Orange | **Schedule repair** - Standard maintenance |
+| **1** | 🟢 LOW | Dry pothole, Vol < 5 kg | Green | **Monitor** - Routine inspection |
+
+---
+
+### **Complete Example: From Image to RPS**
+
+```
+Input: Road frame with pothole
+
+Stage 1 (YOLO):
+  Detected pothole → Polygon: [[100,50], [150,50], [125,100]]
+  Class: "Dry_Pothole"
+
+Stage 2 (DIP Depth):
+  Gradient std = 56.7
+  Depth = 56.7 × 0.15 = 8.5 cm
+
+Stage 3 (Volume):
+  Area = 200 pixels → 200 × 0.5 = 100 cm²
+  Volume = 100 × 8.5 × 2.4 / 1000 = 2.04 kg
+
+Stage 4 (RPS):
+  Class: Dry, Volume: 2.04 kg < 5 kg
+  RPS = 1 (Low priority - Monitor)
+
+Output: "Dry_Pothole | Vol: 2.04 kg | RPS: 1"
+```
+
+---
+
 ## ⚠️ Important Notes
 
 ### Critical First Commits
