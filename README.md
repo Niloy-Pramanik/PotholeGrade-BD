@@ -460,17 +460,6 @@ Training speed: GPU (30 min) vs CPU (2+ hours)
 
 ---
 
-## 🎓 Faculty Presentation Structure
-
-Use these files for your academic presentation:
-
-1. **`notebooks/dataset_eda.ipynb`** – Data diversity visualization
-2. **`notebooks/depth_math_test.ipynb`** – Sobel filter walkthrough
-3. **Output video** – Real-time inference results
-4. **Metrics summary** – RPS distribution, accuracy stats
-
----
-
 ## 🐛 Troubleshooting
 
 | Issue | Solution |
