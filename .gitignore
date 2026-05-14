@@ -13,3 +13,6 @@ build/
 .idea/
 *.mp4
 .pytest_cache/
+*.log
+*.pt
+yolov8*.pt

@@ -16,7 +16,7 @@ def train_yolo_model(
     epochs: int = 20,
     imgsz: int = 640,
     batch_size: int = 16,
-    device: int = 0,
+    device: int | str = 0,
     project: str = "runs/detect",
     name: str = "rdd_poc_model"
 ) -> None:
@@ -68,6 +68,24 @@ def train_yolo_model(
     if not Path(data_yaml).exists():
         raise FileNotFoundError(f"❌ data.yaml not found at '{data_yaml}'.")
 
+    # Smart device detection for macOS M1/M2/M3 and other platforms
+    import torch
+    if isinstance(device, int) and device >= 0:
+        # Check for M1/M2/M3 GPU (Metal Performance Shaders)
+        if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            device = "mps"
+            device_name = "Apple M-Series GPU (MPS)"
+        # Check for NVIDIA CUDA
+        elif torch.cuda.is_available():
+            device = 0
+            device_name = "NVIDIA CUDA GPU"
+        # Fall back to CPU
+        else:
+            device = "cpu"
+            device_name = "CPU"
+    else:
+        device_name = "CPU"
+
     print("=" * 70)
     print("🏗️  PotholeGrade-BD: Proof of Concept (PoC) Training")
     print("=" * 70)
@@ -83,7 +101,7 @@ def train_yolo_model(
     print(f"   • Epochs: {epochs} (PoC - fast training)")
     print(f"   • Image size: {imgsz}x{imgsz}")
     print(f"   • Batch size: {batch_size}")
-    print(f"   • Device: {'GPU' if device >= 0 else 'CPU'}")
+    print(f"   • Device: {device_name} ({device})")
     print(f"   • Project directory: {project}")
     print(f"   • Run name: {name}\n")
 
