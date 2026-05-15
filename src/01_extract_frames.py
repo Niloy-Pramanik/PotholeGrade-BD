@@ -1,8 +1,5 @@
 """
-Frame Extraction Module for PotholeGrade-BD.
-
-Extracts frames from raw smartphone dashcam videos at 1 frame per second
-and saves them as JPEG images for annotation and training.
+Frame Extraction Module - Extract frames from dashcam videos at 1 fps.
 """
 
 import os
@@ -17,56 +14,40 @@ def extract_frames_from_videos(
     fps_target: int = 1
 ) -> None:
     """
-    Extracts frames from all MP4 videos in a directory at a specified frame rate.
-
-    This function iterates through all .mp4 files in video_dir, and extracts
-    frames at the target frame rate (default 1 fps). Frames are saved as JPEG
-    images with sequential numbering in the output directory.
+    Extract frames from MP4 videos at target frame rate.
 
     Args:
-        video_dir (str): Path to directory containing .mp4 videos.
-            Default is 'data/raw_videos'.
-        output_dir (str): Path to directory where extracted frames will be saved.
-            Default is 'data/images'. Directory is created if it doesn't exist.
-        fps_target (int): Target frames per second to extract. Default is 1.
-
-    Returns:
-        None
+        video_dir: Directory containing .mp4 videos (default: data/raw_videos)
+        output_dir: Output directory for extracted frames (default: data/images)
+        fps_target: Frames per second to extract (default: 1)
 
     Raises:
-        FileNotFoundError: If video_dir does not exist.
-        ValueError: If fps_target is <= 0.
-
-    Example:
-        >>> extract_frames_from_videos(
-        ...     video_dir="data/raw_videos",
-        ...     output_dir="data/images",
-        ...     fps_target=1
-        ... )
+        FileNotFoundError: If video_dir does not exist
+        ValueError: If fps_target <= 0
     """
     if not os.path.exists(video_dir):
-        raise FileNotFoundError(f"Video directory '{video_dir}' not found.")
+        raise FileNotFoundError(f"Video directory '{video_dir}' not found")
 
     if fps_target <= 0:
-        raise ValueError(f"fps_target must be > 0, got {fps_target}.")
+        raise ValueError(f"fps_target must be > 0, got {fps_target}")
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     video_files = list(Path(video_dir).glob("*.mp4"))
 
     if not video_files:
-        print(f"⚠️  No .mp4 files found in '{video_dir}'.")
+        print(f"No .mp4 files found in '{video_dir}'")
         return
 
     frame_counter: int = 0
 
     for video_file in video_files:
-        print(f"\n📹 Processing video: {video_file.name}")
+        print(f"\nProcessing: {video_file.name}")
 
         cap = cv2.VideoCapture(str(video_file))
 
         if not cap.isOpened():
-            print(f"❌ Error: Could not open video '{video_file.name}'. Skipping...")
+            print(f"Error: Could not open '{video_file.name}'. Skipping...")
             continue
 
         fps_video: float = cap.get(cv2.CAP_PROP_FPS)
@@ -78,8 +59,7 @@ def extract_frames_from_videos(
         with tqdm(
             total=total_frames,
             desc=f"Extracting @ {fps_target} fps",
-            unit="frame",
-            leave=True
+            unit="frame"
         ) as pbar:
             while True:
                 ret, frame = cap.read()
@@ -100,7 +80,7 @@ def extract_frames_from_videos(
 
         cap.release()
 
-    print(f"\n✅ Extraction complete. Total frames saved: {frame_counter}")
+    print(f"\nExtraction complete. Total frames: {frame_counter}")
 
 
 if __name__ == "__main__":

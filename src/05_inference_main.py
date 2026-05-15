@@ -1,8 +1,5 @@
 """
-Main Inference Pipeline for PotholeGrade-BD.
-
-Combines YOLOv8 detection, DIP analysis, and RPS scoring to process
-video frames and visualize pothole detection results in real-time.
+Inference Pipeline - Detect potholes and calculate metrics.
 """
 
 import cv2
@@ -16,24 +13,7 @@ from rps_logic import calculate_rps
 
 
 class PotholeInferencePipeline:
-    """
-    End-to-end inference pipeline for pothole detection and analysis.
-
-    Combines pre-trained YOLOv8 segmentation model with digital image
-    processing and priority scoring to detect, analyze, and visualize
-    potholes in video frames.
-
-    Attributes:
-        model (YOLO): Loaded YOLOv8 segmentation model.
-        dip_engine (PotholeDIPEngine): DIP engine for metric calculation.
-        confidence_threshold (float): Minimum confidence for detections.
-
-    Example:
-        >>> pipeline = PotholeInferencePipeline(
-        ...     model_path="runs/segment/train/weights/best.pt"
-        ... )
-        >>> pipeline.process_video("test_video.mp4")
-    """
+    """End-to-end inference: YOLOv8 + DIP + RPS scoring."""
 
     def __init__(
         self,
@@ -41,27 +21,23 @@ class PotholeInferencePipeline:
         confidence_threshold: float = 0.5
     ) -> None:
         """
-        Initialize the inference pipeline.
+        Initialize pipeline.
 
         Args:
-            model_path (str): Path to trained YOLOv8 model weights.
-                Default is 'runs/segment/train/weights/best.pt'.
-            confidence_threshold (float): Minimum confidence score for detections.
-                Default is 0.5.
+            model_path: Path to trained YOLOv8 weights
+            confidence_threshold: Minimum confidence for detections
 
         Raises:
-            FileNotFoundError: If model file does not exist.
+            FileNotFoundError: If model file not found
         """
         if not Path(model_path).exists():
-            raise FileNotFoundError(f"❌ Model weights not found at '{model_path}'")
+            raise FileNotFoundError(f"Model not found: {model_path}")
 
-        print(f"🤖 Loading YOLO model from: {model_path}")
+        print(f"Loading YOLO model from: {model_path}")
         self.model: YOLO = YOLO(model_path)
         self.dip_engine: PotholeDIPEngine = PotholeDIPEngine()
         self.confidence_threshold: float = confidence_threshold
-
-        print(f"✅ Model loaded successfully")
-        print(f"   Confidence threshold: {confidence_threshold}")
+        print(f"Model loaded. Confidence threshold: {confidence_threshold}")
 
     def process_video(
         self,
@@ -70,40 +46,24 @@ class PotholeInferencePipeline:
         display: bool = True
     ) -> None:
         """
-        Process a video file and detect/analyze potholes in real-time.
-
-        Reads frames from the input video, runs YOLOv8 inference, calculates
-        pothole metrics via DIP, computes RPS scores, and displays results
-        with annotations.
+        Process video and detect potholes.
 
         Args:
-            video_path (str): Path to input video file (.mp4 or similar).
-            output_path (str, optional): Path to save output video with annotations.
-                If None, output is not saved. Default is None.
-            display (bool): Whether to display frames in real-time.
-                Default is True.
-
-        Returns:
-            None
+            video_path: Input video file path
+            output_path: Output video path (optional)
+            display: Show frames in real-time
 
         Raises:
-            FileNotFoundError: If video file does not exist.
-            ValueError: If video cannot be opened.
-
-        Example:
-            >>> pipeline.process_video(
-            ...     video_path="test.mp4",
-            ...     output_path="output.mp4",
-            ...     display=True
-            ... )
+            FileNotFoundError: If video not found
+            ValueError: If video cannot be opened
         """
         if not Path(video_path).exists():
-            raise FileNotFoundError(f"❌ Video file not found: {video_path}")
+            raise FileNotFoundError(f"Video not found: {video_path}")
 
         cap = cv2.VideoCapture(video_path)
 
         if not cap.isOpened():
-            raise ValueError(f"❌ Cannot open video file: {video_path}")
+            raise ValueError(f"Cannot open video: {video_path}")
 
         fps: float = cap.get(cv2.CAP_PROP_FPS)
         frame_width: int = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -118,9 +78,9 @@ class PotholeInferencePipeline:
         frame_count: int = 0
         pothole_detections: int = 0
 
-        print(f"\n▶️  Processing video: {video_path}")
-        print(f"   Resolution: {frame_width}x{frame_height} @ {fps:.1f} fps")
-        print(f"   Total frames: {total_frames}")
+        print(f"\nProcessing: {video_path}")
+        print(f"Resolution: {frame_width}x{frame_height} @ {fps:.1f} fps")
+        print(f"Total frames: {total_frames}\n")
 
         while True:
             ret, frame = cap.read()
@@ -129,54 +89,37 @@ class PotholeInferencePipeline:
                 break
 
             frame_count += 1
+            annotated_frame, detections = self._process_frame(frame)
+            pothole_detections += detections
 
-            # Run YOLO inference and get annotated frame
-            annotated_frame, detections_in_frame = self._process_frame(frame)
-            pothole_detections += detections_in_frame
-
-            # Display frame
             if display:
-                cv2.imshow("PotholeGrade-BD Inference", annotated_frame)
+                cv2.imshow("PotholeGrade-BD", annotated_frame)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
-                    print("\n⏸️  Inference stopped by user (q pressed)")
+                    print("\nStopped by user")
                     break
 
-            # Write to output video
             if writer:
                 writer.write(annotated_frame)
 
             if frame_count % 30 == 0:
-                print(f"   Processed {frame_count}/{total_frames} frames... ({pothole_detections} potholes detected)")
+                print(f"Processed {frame_count}/{total_frames} ({pothole_detections} potholes)")
 
         cap.release()
         if writer:
             writer.release()
         cv2.destroyAllWindows()
 
-        print(f"\n✅ Processing complete!")
-        print(f"   Total frames processed: {frame_count}")
-        print(f"   Total potholes detected: {pothole_detections}")
+        print(f"\nComplete. Frames: {frame_count}, Potholes: {pothole_detections}")
         if output_path:
-            print(f"   📁 Output saved: {output_path}")
+            print(f"Output: {output_path}")
 
     def _process_frame(self, frame: np.ndarray) -> Tuple[np.ndarray, int]:
-        """
-        Process a single frame: detect potholes, calculate metrics, annotate.
-
-        Args:
-            frame (np.ndarray): RGB/BGR image frame.
-
-        Returns:
-            Tuple[np.ndarray, int]: Annotated frame and count of detections.
-        """
-        # Run YOLO inference
+        """Process single frame and return annotated output."""
         results = self.model(frame, verbose=False)
-
         annotated_frame: np.ndarray = frame.copy()
         detection_count: int = 0
 
-        # Process each detection
         for result in results:
             if result.masks is None:
                 continue
@@ -187,48 +130,31 @@ class PotholeInferencePipeline:
             class_names = result.names
 
             for mask, conf, class_id in zip(masks, confidences, class_ids):
-                # Filter by confidence
                 if conf < self.confidence_threshold:
                     continue
 
                 detection_count += 1
-
-                # Get class name
                 class_name: str = class_names.get(int(class_id), "Unknown")
-
-                # Prepare polygon
                 polygon = mask.astype(np.int32)
 
                 try:
-                    # Calculate metrics via DIP engine
                     metrics = self.dip_engine.calculate_metrics(frame, polygon)
-
-                    # Calculate RPS
                     rps: int = calculate_rps(metrics.volume_kg, class_name)
 
-                    # Determine color based on RPS (Green -> Yellow -> Red)
+                    # Color by RPS: Green (1-2), Orange (3), Red (4-5)
                     if rps <= 2:
-                        color: Tuple[int, int, int] = (0, 255, 0)  # Green
+                        color: Tuple[int, int, int] = (0, 255, 0)
                     elif rps == 3:
-                        color = (0, 165, 255)  # Orange
-                    else:  # RPS 4 or 5
-                        color = (0, 0, 255)  # Red
+                        color = (0, 165, 255)
+                    else:
+                        color = (0, 0, 255)
 
-                    # Draw polygon
                     cv2.drawContours(annotated_frame, [polygon], 0, color, 2)
 
-                    # Create text label
-                    label: str = (
-                        f"{class_name} | "
-                        f"Vol: {metrics.volume_kg:.1f} kg | "
-                        f"RPS: {rps}"
-                    )
-
-                    # Get bounding box for text placement
+                    label: str = f"{class_name} | Vol: {metrics.volume_kg:.1f} kg | RPS: {rps}"
                     x_min, y_min = polygon.min(axis=0)
                     text_pos: Tuple[int, int] = (x_min, max(10, y_min - 10))
 
-                    # Draw text background rectangle
                     (text_width, text_height), baseline = cv2.getTextSize(
                         label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
                     )
@@ -240,7 +166,6 @@ class PotholeInferencePipeline:
                         -1
                     )
 
-                    # Draw text label
                     cv2.putText(
                         annotated_frame,
                         label,
@@ -252,35 +177,27 @@ class PotholeInferencePipeline:
                     )
 
                 except Exception as e:
-                    print(f"⚠️  Error processing detection: {e}")
+                    print(f"Error: {e}")
                     continue
 
         return annotated_frame, detection_count
 
 
 def main() -> None:
-    """
-    Main entry point for the inference pipeline.
-
-    Expects a test video file at 'data/test_video.mp4'.
-    """
-    # Initialize pipeline
+    """Main entry point."""
     try:
         pipeline = PotholeInferencePipeline(
             model_path="runs/segment/train/weights/best.pt",
             confidence_threshold=0.5
         )
     except FileNotFoundError:
-        print("❌ Error: Model weights not found.")
-        print("   Please train the model first using: python src/02_train_yolo.py")
+        print("Error: Model not found. Run: python src/02_train_yolo.py")
         return
 
-    # Process video
     test_video: str = "data/test_video.mp4"
 
     if not Path(test_video).exists():
-        print(f"❌ Error: Test video not found at '{test_video}'")
-        print("   Please provide a test video file in data/test_video.mp4")
+        print(f"Error: Video not found at {test_video}")
         return
 
     pipeline.process_video(
