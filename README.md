@@ -159,9 +159,6 @@ Status: ✅ Pipeline validated, ready for custom data
 - `BoxPR_curve.png` - Precision-Recall trade-off (AP50 score)
 - `BoxF1_curve.png` - Balanced performance metric
 
-📖 **For detailed explanations, see:**
-- `TRAINING_RESULTS_EXPLAINED.md` - Technical deep-dive
-- `PNG_GUIDE_SIMPLE.md` - Simple visual explanations
 
 #### Step 3b: Train on Custom Bangladesh Road Data (Next Phase)
 
