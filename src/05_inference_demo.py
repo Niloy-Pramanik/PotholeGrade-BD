@@ -54,10 +54,10 @@ def run_pipeline_demo(image_path: str) -> None:
     # Resize to 640x640 to match training resolution
     image_resized: np.ndarray = cv2.resize(image, (640, 640))
     print(f"[SYSTEM] Resized to: {image_resized.shape}")
-    print(f"[SYSTEM] Confidence threshold: 0.20\n")
+    print(f"[SYSTEM] Confidence threshold: 0.10\n")
 
     # Run inference
-    results = model.predict(image_resized, conf=0.20, verbose=False)
+    results = model.predict(image_resized, conf=0.10, verbose=False)
 
     detection_count: int = 0
 
@@ -112,7 +112,7 @@ def run_pipeline_demo(image_path: str) -> None:
 
 if __name__ == "__main__":
     try:
-        run_pipeline_demo("data/test_pothole.jpg")
+        run_pipeline_demo("data/test_pothole_2.jpg")
     except FileNotFoundError as e:
         print(f"[ERROR] {e}")
     except ValueError as e:
