@@ -255,9 +255,6 @@ The low recall (0.281) with RDD2020 is **expected and normal** because:
 6. **BoxPR_curve.png** - Precision-Recall trade-off (most important)
 7. **BoxF1_curve.png** - Balanced F1 score metric
 
-📖 **For detailed explanations, see:**
-- `TRAINING_RESULTS_EXPLAINED.md` - Technical deep-dive of all metrics
-- `PNG_GUIDE_SIMPLE.md` - Simple visual explanations for non-technical users
 
 ---
 
