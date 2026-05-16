@@ -40,8 +40,9 @@ def process_pothole_data(image_path: str, coords: Union[List[int], Tuple[int, in
 
     x1, y1, x2, y2 = coords
 
-    if not all(isinstance(c, int) for c in coords):
-        raise TypeError("All coordinates must be integers")
+    if not all(isinstance(c, (int, np.integer)) for c in coords):
+        coords = [int(c) for c in coords]
+        x1, y1, x2, y2 = coords
 
     if x1 >= x2 or y1 >= y2:
         raise ValueError(f"Invalid coordinates: x1={x1} < x2={x2}, y1={y1} < y2={y2}")
