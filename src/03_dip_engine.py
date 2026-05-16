@@ -1,116 +1,122 @@
 """
-Digital Image Processing Engine - Calculate pothole depth and volume.
+Mock Digital Image Processing Engine - Simulate pothole analysis for demo.
+
+Crops pothole ROI from image and simulates depth/volume calculations
+with professional terminal output and visualization.
 """
 
 import cv2
-import numpy as np
-from dataclasses import dataclass
+import random
+from pathlib import Path
+from typing import Tuple, List, Union
 
 
-@dataclass
-class PotholeMetrics:
-    """Pothole measurement results."""
-    depth_cm: float
-    area_cm2: float
-    volume_kg: float
-    gradient_std: float
-
-
-class PotholeDIPEngine:
+def process_pothole_data(image_path: str, coords: Union[List[int], Tuple[int, int, int, int]]) -> None:
     """
-    OpenCV-based engine for pothole depth and volume estimation.
-    
-    Uses shadow gradient analysis to estimate depth without neural networks.
+    Process pothole data and calculate simulated RPS.
+
+    Loads image, crops ROI using bounding box, simulates volume calculation,
+    determines repair priority score, and displays results.
+
+    Args:
+        image_path: Path to input image file.
+        coords: Bounding box as [x1, y1, x2, y2].
+
+    Raises:
+        FileNotFoundError: If image not found.
+        ValueError: If coordinates invalid or image cannot be read.
+        TypeError: If coords not list/tuple of integers.
+
+    Returns:
+        None
     """
+    # Validate inputs
+    if not Path(image_path).exists():
+        raise FileNotFoundError(f"Image not found: {image_path}")
 
-    CALIBRATION_CONSTANT: float = 0.15
-    PIXEL_TO_CM2: float = 0.5
-    ASPHALT_DENSITY: float = 2.4
+    if not isinstance(coords, (list, tuple)) or len(coords) != 4:
+        raise TypeError("coords must be [x1, y1, x2, y2]")
 
-    def __init__(self) -> None:
-        """Initialize DIP engine."""
-        pass
+    x1, y1, x2, y2 = coords
 
-    def calculate_metrics(
-        self,
-        image: np.ndarray,
-        polygon_coords: np.ndarray
-    ) -> PotholeMetrics:
-        """
-        Calculate pothole depth and volume.
+    if not all(isinstance(c, int) for c in coords):
+        raise TypeError("All coordinates must be integers")
 
-        Args:
-            image: RGB image array (H, W, 3)
-            polygon_coords: Polygon vertices (N, 2)
+    if x1 >= x2 or y1 >= y2:
+        raise ValueError(f"Invalid coordinates: x1={x1} < x2={x2}, y1={y1} < y2={y2}")
 
-        Returns:
-            PotholeMetrics with depth, area, volume
+    # Load image
+    image: cv2.Mat = cv2.imread(image_path)
+    if image is None:
+        raise ValueError(f"Cannot read image: {image_path}")
 
-        Raises:
-            ValueError: If polygon < 3 points or image invalid
-            TypeError: If inputs not numpy arrays
-        """
-        if not isinstance(image, np.ndarray):
-            raise TypeError(f"Expected ndarray for image, got {type(image)}")
-        if not isinstance(polygon_coords, np.ndarray):
-            raise TypeError(f"Expected ndarray for polygon, got {type(polygon_coords)}")
+    h, w = image.shape[:2]
+    print("[DIP ENGINE] Initializing Digital Image Processing pipeline...")
+    print(f"[DIP ENGINE] Image shape: {w}×{h} pixels\n")
 
-        if len(polygon_coords) < 3:
-            raise ValueError(f"Polygon needs >= 3 points, got {len(polygon_coords)}")
+    # Validate bbox bounds
+    x1_clipped: int = max(0, x1)
+    y1_clipped: int = max(0, y1)
+    x2_clipped: int = min(w, x2)
+    y2_clipped: int = min(h, y2)
 
-        if image.size == 0:
-            raise ValueError("Image is empty")
+    print(f"[DIP ENGINE] Processing ROI: [{x1_clipped}, {y1_clipped}, {x2_clipped}, {y2_clipped}]")
 
-        # Create mask for pothole region
-        mask: np.ndarray = self._create_mask(image, polygon_coords)
+    # Crop ROI
+    roi: cv2.Mat = image[y1_clipped:y2_clipped, x1_clipped:x2_clipped]
 
-        # Extract pothole region
-        gray_image: np.ndarray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        pothole_region: np.ndarray = gray_image[mask > 0]
+    if roi.size == 0:
+        raise ValueError("ROI is empty after cropping")
 
-        if pothole_region.size == 0:
-            raise ValueError("Pothole mask is empty")
+    roi_height, roi_width = roi.shape[:2]
+    print(f"[DIP ENGINE] ROI extracted: {roi_width}×{roi_height} pixels\n")
 
-        # Calculate gradient-based depth
-        gradient_std: float = self._calculate_shadow_gradient(gray_image, mask)
-        depth_cm: float = gradient_std * self.CALIBRATION_CONSTANT
+    # Simulate area calculation
+    area_m2: float = random.uniform(0.5, 2.5)
+    print(f"[DIP ENGINE] Simulated area: {area_m2:.2f} m²")
 
-        # Calculate area
-        area_pixels: float = float(cv2.contourArea(polygon_coords.astype(np.float32)))
-        area_cm2: float = area_pixels * self.PIXEL_TO_CM2
+    # Simulate volume calculation
+    volume_kg: int = random.randint(10, 50)
+    print(f"[DIP ENGINE] Simulated volume: {volume_kg} kg of asphalt\n")
 
-        # Calculate volume
-        volume_cm3: float = area_cm2 * depth_cm
-        volume_g: float = volume_cm3 * self.ASPHALT_DENSITY
-        volume_kg: float = volume_g / 1000.0
+    # Calculate RPS
+    if volume_kg > 40:
+        rps_level: int = 3
+        severity: str = "CRITICAL"
+    elif volume_kg >= 20:
+        rps_level = 2
+        severity = "MODERATE"
+    else:
+        rps_level = 1
+        severity = "LOW"
 
-        return PotholeMetrics(
-            depth_cm=depth_cm,
-            area_cm2=area_cm2,
-            volume_kg=volume_kg,
-            gradient_std=gradient_std
-        )
+    print("[DIP ENGINE] Repair Priority Score (RPS) Calculation:")
+    print(f"  Volume: {volume_kg} kg")
+    print(f"  Decision Logic: {'>' if volume_kg > 40 else '>=' if volume_kg >= 20 else '<'} threshold")
+    print(f"  → RPS Level {rps_level} ({severity})")
+    print("[DIP ENGINE] Handoff complete. Passing ROI to Phase 3 (Visualization)...\n")
 
-    def _create_mask(self, image: np.ndarray, polygon_coords: np.ndarray) -> np.ndarray:
-        """Create binary mask for pothole region."""
-        h, w = image.shape[:2]
-        mask = np.zeros((h, w), dtype=np.uint8)
-        polygon_int = polygon_coords.astype(np.int32)
-        cv2.fillPoly(mask, [polygon_int], 255)
-        return mask
+    # Display ROI
+    try:
+        window_name: str = f"PotholeGrade-BD: DIP Engine - RPS Level {rps_level} ({severity})"
+        cv2.imshow(window_name, roi)
+        print(f"[DIP ENGINE] Displaying: {window_name}")
+        print("[DIP ENGINE] Press any key to close...")
+        key = cv2.waitKey(1000)
+        cv2.destroyAllWindows()
+    except Exception as e:
+        print(f"[DIP ENGINE] Display skipped (headless mode): {e}")
+        print(f"[DIP ENGINE] ROI shape: {roi.shape}")
 
-    def _calculate_shadow_gradient(
-        self,
-        gray_image: np.ndarray,
-        mask: np.ndarray
-    ) -> float:
-        """Calculate gradient magnitude std dev in masked region."""
-        sobel_x: np.ndarray = cv2.Sobel(gray_image, cv2.CV_64F, 1, 0, ksize=3)
-        sobel_y: np.ndarray = cv2.Sobel(gray_image, cv2.CV_64F, 0, 1, ksize=3)
-        gradient_magnitude: np.ndarray = np.sqrt(sobel_x**2 + sobel_y**2)
-        masked_gradients: np.ndarray = gradient_magnitude[mask > 0]
-        
-        if masked_gradients.size == 0:
-            return 0.0
-        
-        return float(np.std(masked_gradients))
+    print("[DIP ENGINE] Complete.\n")
+
+
+if __name__ == "__main__":
+    try:
+        process_pothole_data("data/test_pothole.jpg", [100, 150, 400, 350])
+    except FileNotFoundError as e:
+        print(f"[ERROR] {e}")
+    except ValueError as e:
+        print(f"[ERROR] {e}")
+    except TypeError as e:
+        print(f"[ERROR] {e}")
