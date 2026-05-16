@@ -103,7 +103,7 @@ def run_pipeline_demo(image_path: str) -> None:
             # Pass to DIP Engine for volume calculation and RPS
             coords_list: list = [x1, y1, x2, y2]
             try:
-                process_pothole_data(image_path, coords_list, verbose=True)
+                process_pothole_data(image_path, coords_list, verbose=False)
             except Exception as e:
                 print(f"[ERROR] DIP Engine failed: {e}\n")
 
