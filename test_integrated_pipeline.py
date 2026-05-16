@@ -11,12 +11,14 @@ from pathlib import Path
 from ultralytics import YOLO
 from typing import Union, List, Tuple
 
+# Add src to path and import DIP engine
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+from dip_engine import process_pothole_data as dip_process
 
+# Wrapper to capture DIP results
 def process_pothole_data(image_path: str, coords: Union[List[int], Tuple[int, int, int, int]]) -> dict:
     """
-    Process pothole data and calculate RPS.
-
-    Returns dict with results instead of just printing.
+    Wrapper around DIP engine that captures results for summary.
     """
     if not Path(image_path).exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
@@ -96,11 +98,8 @@ def process_pothole_data(image_path: str, coords: Union[List[int], Tuple[int, in
     return result
 
 
-def test_integrated_pipeline():
+def test_integrated_pipeline(image_path: str = "data/test_pothole_2.jpg", model_path: str = "runs/detect/runs/detect/rdd_poc_model-4/weights/best.pt"):
     """Test the complete pipeline: YOLO detection + DIP analysis."""
-
-    image_path = "data/test_pothole_2.jpg"
-    model_path = "runs/detect/runs/detect/rdd_poc_model-4/weights/best.pt"
 
     print("=" * 70)
     print("INTEGRATED PIPELINE TEST: YOLO Detection + DIP Engine")
@@ -193,5 +192,14 @@ def test_integrated_pipeline():
 
 
 if __name__ == "__main__":
-    success = test_integrated_pipeline()
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Test integrated YOLO + DIP pipeline")
+    parser.add_argument("--image", default="data/test_pothole_2.jpg", 
+                        help="Path to test image (default: data/test_pothole_2.jpg)")
+    parser.add_argument("--model", default="runs/detect/runs/detect/rdd_poc_model-4/weights/best.pt",
+                        help="Path to YOLOv8 model weights")
+    args = parser.parse_args()
+    
+    success = test_integrated_pipeline(image_path=args.image, model_path=args.model)
     sys.exit(0 if success else 1)

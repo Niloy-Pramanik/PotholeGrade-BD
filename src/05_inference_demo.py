@@ -129,7 +129,7 @@ def run_pipeline_demo(image_path: str) -> None:
 
 if __name__ == "__main__":
     try:
-        run_pipeline_demo("data/test_pothole_2.jpg")
+        run_pipeline_demo("data/test_pothole_3.jpg")
     except FileNotFoundError as e:
         print(f"[ERROR] {e}")
     except ValueError as e:
