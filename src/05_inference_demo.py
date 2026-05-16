@@ -104,7 +104,7 @@ def run_pipeline_demo(image_path: str) -> None:
             coords_list: list = [x1, y1, x2, y2]
             try:
                 print(f"[PIPELINE] Handoff to Phase 2 - DIP Engine...\n")
-                process_pothole_data(image_path, coords_list)
+                process_pothole_data(image_path, coords_list, verbose=False)
             except Exception as e:
                 print(f"[ERROR] DIP Engine failed: {e}\n")
 
@@ -129,7 +129,7 @@ def run_pipeline_demo(image_path: str) -> None:
 
 if __name__ == "__main__":
     try:
-        run_pipeline_demo("data/test_pothole_3.jpg")
+        run_pipeline_demo("data/test_pothole_2.jpg")
     except FileNotFoundError as e:
         print(f"[ERROR] {e}")
     except ValueError as e:
