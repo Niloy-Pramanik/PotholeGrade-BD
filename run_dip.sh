@@ -1,3 +1,3 @@
 #!/bin/bash
 cd /Users/niloypramanik/PotholeGrade-BD
-.venv/bin/python src/03_dip_engine.py
+.venv/bin/python src/dip_engine.py
