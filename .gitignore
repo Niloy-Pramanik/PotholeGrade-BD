@@ -16,3 +16,7 @@ build/
 *.log
 *.pt
 yolov8*.pt
+
+# Markdown files (except README.md)
+*.md
+!README.md
